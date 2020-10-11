@@ -69,53 +69,51 @@ public class PlayerJoinLog {
 
     public void onStateUpdate(Player member, String after) {
         try {
-            if (sessionBuilder.isOwner(member)) {
-                // 主
+            LocalDateTime now = LocalDateTime.now(timezone);
+            LocalDate nowDate = LocalDate.now(timezoneDate);
 
-                // 退出
-                if (session != null && !session.isTarget(after)) {
-                    LocalDateTime now = LocalDateTime.now(timezone);
-
-                    // 残っている人
-                    for (Player m : server.getServer(session.server).map(RegisteredServer::getPlayersConnected).orElseGet(Collections::emptyList))
-                        if (!Objects.equals(m, member))
-                            session.log.log(now, m, false);
-
+            synchronized (this) {
+                if (sessionBuilder.isOwner(member)) {
                     // 主
-                    session.log.log(now, member, false);
 
-                    session = sessionBuilder.end(session);
-                }
+                    // 退出
+                    if (session != null && !session.isTarget(after)) {
+                        // 残っている人
+                        for (Player m : server.getServer(session.server).map(RegisteredServer::getPlayersConnected).orElseGet(Collections::emptyList))
+                            if (!Objects.equals(m, member))
+                                session.log.log(now, m, false);
 
-                // 参加
-                if (after != null) {
-                    LocalDateTime now = LocalDateTime.now(timezone);
-                    LocalDate nowDate = LocalDate.now(timezoneDate);
+                        // 主
+                        session.log.log(now, member, false);
 
-                    session = sessionBuilder.end(session);
-                    session = sessionBuilder.begin(after, nowDate);
+                        session = sessionBuilder.end(session);
+                    }
 
-                    // 主
-                    session.log.log(now, member, true);
+                    // 参加
+                    if (after != null) {
+                        session = sessionBuilder.end(session);
+                        session = sessionBuilder.begin(after, nowDate);
 
-                    // 既にいる人
-                    for (Player m : server.getServer(after).map(RegisteredServer::getPlayersConnected).orElseGet(Collections::emptyList))
-                        if (!Objects.equals(m, member))
-                            session.log.log(now, m, true);
-                }
-            } else if (session != null) {
-                // 参加勢
+                        // 主
+                        session.log.log(now, member, true);
 
-                LocalDateTime now = LocalDateTime.now(timezone);
+                        // 既にいる人
+                        for (Player m : server.getServer(after).map(RegisteredServer::getPlayersConnected).orElseGet(Collections::emptyList))
+                            if (!Objects.equals(m, member))
+                                session.log.log(now, m, true);
+                    }
+                } else if (session != null) {
+                    // 参加勢
 
-                // 参加
-                if (session.isTarget(after)) {
-                    session.log.log(now, member, true);
-                }
+                    // 参加
+                    if (session.isTarget(after)) {
+                        session.log.log(now, member, true);
+                    }
 
-                // 退出
-                else {
-                    session.log.log(now, member, false);
+                    // 退出
+                    else {
+                        session.log.log(now, member, false);
+                    }
                 }
             }
         } catch (IOException e) {
